@@ -17,7 +17,6 @@ body{
 }
 
 .container{max-width:1000px;margin:40px auto;padding:0 16px}
-
 header{text-align:center;margin-bottom:16px}
 h1{margin:0 0 6px 0;font-size:32px;letter-spacing:.5px}
 .sub{margin:0;color:var(--muted)}
@@ -35,11 +34,8 @@ h1{margin:0 0 6px 0;font-size:32px;letter-spacing:.5px}
 .btn-primary{
   background:linear-gradient(135deg, var(--accent), var(--accent-2));
   color:#001119;
-  border:none;
-  border-radius:14px;
-  padding:12px 18px;
-  font-weight:700;
-  cursor:pointer;
+  border:none;border-radius:14px;
+  padding:12px 18px;font-weight:700;cursor:pointer;
   transition: transform .08s ease, box-shadow .2s ease;
   box-shadow:0 10px 24px rgba(94,234,212,.25);
 }
@@ -48,7 +44,6 @@ h1{margin:0 0 6px 0;font-size:32px;letter-spacing:.5px}
 
 .steps{margin:18px 0 6px 0}
 .hidden{display:none}
-
 .step{
   display:flex;align-items:center;gap:10px;
   margin:10px 0;padding:10px 12px;border-radius:12px;
@@ -75,22 +70,20 @@ h1{margin:0 0 6px 0;font-size:32px;letter-spacing:.5px}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 @media (max-width:800px){.grid{grid-template-columns:1fr}}
 
-.box{
-  padding:14px;border-radius:14px;background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.07)
-}
+.box{padding:14px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)}
 
 .coefs{margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.coefs .pill{
-  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
-  padding:8px;border-radius:12px
-}
+.coefs .pill{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);padding:8px;border-radius:12px}
 
-.table-wrap{overflow:auto;border-radius:12px;border:1px solid rgba(255,255,255,.07)}
+.table-wrap{overflow:auto;border-radius:12px;border:1px solid rgba(255,255,255,.07);margin-top:8px}
 table{border-collapse:collapse;width:100%;min-width:640px}
 thead{background:rgba(255,255,255,.06)}
 th,td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.06);text-align:left}
 tbody tr:hover{background:rgba(255,255,255,.03)}
+
+.policy{margin-top:10px}
+.policy h4{margin:8px 0 4px 0}
+.policy ul{margin:0;padding-left:18px}
 
 .done{margin-top:14px}
 .badge{
@@ -108,8 +101,4 @@ tbody tr:hover{background:rgba(255,255,255,.03)}
 footer{text-align:center;color:var(--muted);margin-top:18px}
 
 @keyframes fade-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-@keyframes pulse{
-  0%{transform:scale(.9);opacity:.8}
-  50%{transform:scale(1.1);opacity:1}
-  100%{transform:scale(.9);opacity:.8}
-}
+@keyframes pulse{0%{transform:scale(.9);opacity:.8}50%{transform:scale(1.1);opacity:1}100%{transform:scale(.9);opacity:.8}}

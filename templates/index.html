@@ -3,28 +3,28 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>🏡 Predicción de Casas — Demo ML</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <title>🎓 Predicción Académica — Notas y Créditos</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2" />
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>🏡 Predicción de Casas</h1>
-      <p class="sub">Regresión Lineal con dataset de California — demo interactiva</p>
+      <h1>🎓 Predicción de Nota Final y Créditos</h1>
+      <p class="sub">Modelo de Regresión Lineal con datos académicos — demo interactiva</p>
     </header>
 
     <section class="card">
       <div class="hero">
-        <p>Presiona el botón para analizar el dataset, entrenar el modelo y ver resultados.</p>
+        <p>Analiza el dataset, entrena el modelo y visualiza <b>X</b> (entradas) y <b>Y</b> (salidas).</p>
         <button id="startBtn" class="btn-primary">▶️ Empezar</button>
       </div>
 
       <div id="steps" class="steps hidden">
-        <div class="step"><div class="dot"></div><div class="label">1) Cargando y validando dataset…</div></div>
-        <div class="step"><div class="dot"></div><div class="label">2) Preparando variables X (entradas) y Y (salida)…</div></div>
-        <div class="step"><div class="dot"></div><div class="label">3) Dividiendo en entrenamiento/prueba (80/20)…</div></div>
-        <div class="step"><div class="dot"></div><div class="label">4) Entrenando modelo de Regresión Lineal…</div></div>
-        <div class="step"><div class="dot"></div><div class="label">5) Evaluando métricas (MSE, R², RMSE USD)…</div></div>
+        <div class="step"><div class="dot"></div><div class="label">1) Generando / cargando dataset…</div></div>
+        <div class="step"><div class="dot"></div><div class="label">2) Separando variables X (entradas) y Y (salidas)…</div></div>
+        <div class="step"><div class="dot"></div><div class="label">3) Dividiendo en entrenamiento / prueba (80/20)…</div></div>
+        <div class="step"><div class="dot"></div><div class="label">4) Entrenando modelo para NotaFinal…</div></div>
+        <div class="step"><div class="dot"></div><div class="label">5) Calculando métricas (MSE, RMSE, R²)…</div></div>
         <div class="progress"><div class="bar" id="bar"></div></div>
       </div>
 
@@ -36,32 +36,40 @@
             <h3>📦 Dataset</h3>
             <p><b>Filas:</b> <span id="rows">–</span></p>
             <p><b>Columnas:</b> <span id="cols">–</span></p>
-            <p><b>Features (X):</b> <span id="features">–</span></p>
-            <p><b>Target (Y):</b> <span id="target">–</span></p>
-            <p style="color:#9fc6ff;margin-top:6px;"><small id="unitsNote">–</small></p>
+            <p><b>Entradas X:</b> <span id="xcols">–</span></p>
+            <p><b>Salidas Y:</b> <span id="ycols">–</span></p>
+            <p style="color:#9fc6ff;margin-top:6px;"><small id="note">–</small></p>
+
+            <div class="policy">
+              <h4>🎯 Política de Créditos</h4>
+              <ul id="policyList"></ul>
+            </div>
           </div>
 
           <div class="box">
-            <h3>🧠 Modelo</h3>
-            <p><b>MSE (unidad nativa):</b> <span id="mse">–</span></p>
-            <p><b>RMSE (USD):</b> <span id="rmseUsd">–</span></p>
+            <h3>🧠 Modelo (predice <code>NotaFinal</code>)</h3>
+            <p><b>MSE:</b> <span id="mse">–</span></p>
+            <p><b>RMSE:</b> <span id="rmse">–</span> <small>(escala 0–5)</small></p>
             <p><b>R²:</b> <span id="r2">–</span></p>
             <p><b>Intercepto:</b> <span id="intercept">–</span></p>
             <div id="coefs" class="coefs"></div>
           </div>
         </div>
 
-        <h3>👀 Vista previa del dataset (incluye <code>MedHouseVal_USD</code>)</h3>
+        <h3>🔢 Tabla X — Entradas (primeras filas)</h3>
         <div class="table-wrap">
-          <table id="previewTable">
-            <thead></thead>
-            <tbody></tbody>
-          </table>
+          <table id="tableX"><thead></thead><tbody></tbody></table>
+        </div>
+
+        <h3>🎯 Tabla Y — Salidas (primeras filas)</h3>
+        <div class="table-wrap">
+          <table id="tableY"><thead></thead><tbody></tbody></table>
         </div>
 
         <div class="done">
           <span class="badge">✅ Proceso completado</span>
-          <p>Este modelo estima <b>MedHouseVal</b> (valor medio de vivienda). Para mayor claridad, se incluye la columna <b>MedHouseVal_USD</b> con el valor convertido a <b>dólares (USD)</b>.</p>
+          <p>El modelo estima <b>NotaFinal</b> (0–5) a partir de variables académicas numéricas.
+             Los <b>CréditosAsignados</b> se determinan por política institucional según el <b>PromedioAcumulado</b>.</p>
         </div>
       </div>
 
@@ -71,6 +79,108 @@
     <footer><p>Hecho con 💙 Flask + scikit-learn + CSS animations</p></footer>
   </div>
 
-  <script src="{{ url_for('static', filename='app.js') }}"></script>
+  <!-- JS embebido -->
+  <script>
+  const startBtn = document.getElementById("startBtn");
+  const stepsEl = document.getElementById("steps");
+  const resultEl = document.getElementById("result");
+  const errorEl = document.getElementById("error");
+  const barEl = document.getElementById("bar");
+
+  const rowsEl = document.getElementById("rows");
+  const colsEl = document.getElementById("cols");
+  const xcolsEl = document.getElementById("xcols");
+  const ycolsEl = document.getElementById("ycols");
+  const noteEl = document.getElementById("note");
+  const policyListEl = document.getElementById("policyList");
+
+  const mseEl = document.getElementById("mse");
+  const rmseEl = document.getElementById("rmse");
+  const r2El = document.getElementById("r2");
+  const interceptEl = document.getElementById("intercept");
+  const coefsEl = document.getElementById("coefs");
+
+  const tableX = document.getElementById("tableX");
+  const tableY = document.getElementById("tableY");
+
+  function markStepDone(idx) {
+    const step = document.querySelectorAll(".step")[idx];
+    if (step) step.classList.add("done");
+    const progress = ((idx + 1) / document.querySelectorAll(".step").length) * 100;
+    barEl.style.width = progress + "%";
+  }
+
+  function fillTable(table, rows) {
+    if (!rows || rows.length === 0) return;
+    const cols = Object.keys(rows[0]);
+    const thead = table.querySelector("thead");
+    const tbody = table.querySelector("tbody");
+    thead.innerHTML = ""; tbody.innerHTML = "";
+
+    const trHead = document.createElement("tr");
+    cols.forEach(c => { const th = document.createElement("th"); th.textContent = c; trHead.appendChild(th); });
+    thead.appendChild(trHead);
+
+    rows.forEach(r => {
+      const tr = document.createElement("tr");
+      cols.forEach(c => { const td = document.createElement("td"); td.textContent = r[c]; tr.appendChild(td); });
+      tbody.appendChild(tr);
+    });
+  }
+
+  async function startPipeline() {
+    startBtn.disabled = true;
+    errorEl.classList.add("hidden");
+    resultEl.classList.add("hidden");
+    stepsEl.classList.remove("hidden");
+    barEl.style.width = "0%";
+    document.querySelectorAll(".step").forEach(s => s.classList.remove("done"));
+
+    const tick = (i, d) => new Promise(res => setTimeout(() => { markStepDone(i); res(); }, d));
+    await tick(0, 300); await tick(1, 300); await tick(2, 300); await tick(3, 300);
+
+    try {
+      const resp = await fetch("/start");
+      const data = await resp.json();
+      await tick(4, 300);
+
+      if (!data.ok) throw new Error(data.error || "Error desconocido");
+      const r = data.result;
+
+      rowsEl.textContent = r.dataset_info.rows;
+      colsEl.textContent = r.dataset_info.cols;
+      xcolsEl.textContent = r.dataset_info.X_cols.join(", ");
+      ycolsEl.textContent = r.dataset_info.Y_cols.join(", ");
+      noteEl.textContent = r.dataset_info.note;
+
+      policyListEl.innerHTML = "";
+      r.dataset_info.policy_credits.forEach(rule => { const li = document.createElement("li"); li.textContent = rule; policyListEl.appendChild(li); });
+
+      mseEl.textContent = r.metrics.mse.toFixed(4);
+      rmseEl.textContent = r.metrics.rmse.toFixed(3);
+      r2El.textContent = r.metrics.r2.toFixed(3);
+      interceptEl.textContent = r.metrics.intercept.toFixed(4);
+
+      coefsEl.innerHTML = "";
+      Object.entries(r.metrics.coefs).forEach(([k, v]) => {
+        const div = document.createElement("div");
+        div.className = "pill";
+        div.textContent = `${k}: ${v.toFixed(4)}`;
+        coefsEl.appendChild(div);
+      });
+
+      fillTable(tableX, r.preview_X);
+      fillTable(tableY, r.preview_Y);
+      resultEl.classList.remove("hidden");
+    } catch (err) {
+      errorEl.textContent = "⚠️ " + err.message;
+      errorEl.classList.remove("hidden");
+    } finally {
+      startBtn.disabled = false;
+    }
+  }
+
+  startBtn.addEventListener("click", startPipeline);
+  </script>
 </body>
 </html>
