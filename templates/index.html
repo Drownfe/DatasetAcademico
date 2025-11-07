@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🏡 Predicción de Casas — Demo ML</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🏡 Predicción de Casas</h1>
+      <p class="sub">Regresión Lineal con dataset de California — demo interactiva</p>
+    </header>
+
+    <section class="card">
+      <div class="hero">
+        <p>Presiona el botón para analizar el dataset, entrenar el modelo y ver resultados.</p>
+        <button id="startBtn" class="btn-primary">▶️ Empezar</button>
+      </div>
+
+      <div id="steps" class="steps hidden">
+        <div class="step"><div class="dot"></div><div class="label">1) Cargando y validando dataset…</div></div>
+        <div class="step"><div class="dot"></div><div class="label">2) Preparando variables X (entradas) y Y (salida)…</div></div>
+        <div class="step"><div class="dot"></div><div class="label">3) Dividiendo en entrenamiento/prueba (80/20)…</div></div>
+        <div class="step"><div class="dot"></div><div class="label">4) Entrenando modelo de Regresión Lineal…</div></div>
+        <div class="step"><div class="dot"></div><div class="label">5) Evaluando métricas (MSE, R², RMSE USD)…</div></div>
+        <div class="progress"><div class="bar" id="bar"></div></div>
+      </div>
+
+      <div id="result" class="result hidden">
+        <h2>📊 Resultados</h2>
+
+        <div class="grid">
+          <div class="box">
+            <h3>📦 Dataset</h3>
+            <p><b>Filas:</b> <span id="rows">–</span></p>
+            <p><b>Columnas:</b> <span id="cols">–</span></p>
+            <p><b>Features (X):</b> <span id="features">–</span></p>
+            <p><b>Target (Y):</b> <span id="target">–</span></p>
+            <p style="color:#9fc6ff;margin-top:6px;"><small id="unitsNote">–</small></p>
+          </div>
+
+          <div class="box">
+            <h3>🧠 Modelo</h3>
+            <p><b>MSE (unidad nativa):</b> <span id="mse">–</span></p>
+            <p><b>RMSE (USD):</b> <span id="rmseUsd">–</span></p>
+            <p><b>R²:</b> <span id="r2">–</span></p>
+            <p><b>Intercepto:</b> <span id="intercept">–</span></p>
+            <div id="coefs" class="coefs"></div>
+          </div>
+        </div>
+
+        <h3>👀 Vista previa del dataset (incluye <code>MedHouseVal_USD</code>)</h3>
+        <div class="table-wrap">
+          <table id="previewTable">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="done">
+          <span class="badge">✅ Proceso completado</span>
+          <p>Este modelo estima <b>MedHouseVal</b> (valor medio de vivienda). Para mayor claridad, se incluye la columna <b>MedHouseVal_USD</b> con el valor convertido a <b>dólares (USD)</b>.</p>
+        </div>
+      </div>
+
+      <div id="error" class="error hidden"></div>
+    </section>
+
+    <footer><p>Hecho con 💙 Flask + scikit-learn + CSS animations</p></footer>
+  </div>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
