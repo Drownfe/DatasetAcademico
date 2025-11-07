@@ -1,107 +1,105 @@
 
-# 🏡 Predicción de Casas — Proyecto Interactivo con Flask & Machine Learning
+# 🎓 Predicción Académica — Notas y Créditos
 
-## 📘 Descripción General
-Este proyecto demuestra un flujo completo de *Machine Learning* usando un **modelo de Regresión Lineal** para predecir el valor promedio de viviendas en California 🏠.  
-La aplicación está construida con **Flask**, **pandas**, **scikit-learn** y **CSS animations**, ofreciendo una interfaz web moderna e interactiva que muestra cada paso del análisis y entrenamiento del modelo.
+Este proyecto implementa un modelo de **Regresión Lineal** que analiza un dataset académico generado automáticamente para predecir la **nota final (0–5)** de un estudiante y estimar cuántos **créditos** puede matricular según su rendimiento.
 
 ---
 
-## 🚀 Funcionalidades
-✅ Carga automática del dataset `california_housing.csv` (si no existe).  
-✅ Procesamiento de datos y división en conjuntos de entrenamiento y prueba.  
-✅ Entrenamiento de un modelo de **Regresión Lineal**.  
-✅ Cálculo de métricas de rendimiento: **Error Cuadrático Medio (MSE)** y **Coeficiente de Determinación (R²)**.  
-✅ Visualización de coeficientes del modelo.  
-✅ Vista previa del dataset real.  
-✅ Interfaz web con animaciones, colores, y pasos guiados.  
+## 🧠 Descripción del Proyecto
+
+El sistema genera un dataset simulado con variables académicas realistas:
+
+- `PromedioAcumulado` (promedio de semestres previos)
+- `AsistenciaPct` (porcentaje de asistencia)
+- `HorasEstudioSem` (horas de estudio semanales)
+- `TareasEntregadasPct` (porcentaje de tareas entregadas)
+- `Parcial1`, `Parcial2`
+- `DificultadMateria` (nivel 1 a 5)
+- `IntentosReprobados`
+- `NotaFinal` (calculada por el modelo)
+- `CreditosAsignados` (según política académica)
+
+El modelo se entrena para predecir la **NotaFinal** a partir de las demás variables, mientras que los **CréditosAsignados** se determinan con base en el promedio acumulado.
 
 ---
 
-## 🧠 Tecnologías Utilizadas
-- **Python 3.10+**
-- **Flask** 🌐 (Backend y servidor web)
-- **scikit-learn** 🤖 (Modelo predictivo)
-- **pandas** 🧮 (Procesamiento de datos)
-- **HTML + CSS + JS** 💅 (Interfaz animada)
+## 📊 Variables
+
+| Tipo | Variable | Descripción |
+|------|-----------|-------------|
+| 🎯 Y (Salida) | `NotaFinal` | Predicción de la nota final (escala 0–5) |
+| 🎯 Y (Salida) | `CreditosAsignados` | Créditos recomendados según desempeño |
+| 🔢 X (Entrada) | `PromedioAcumulado` | Promedio general del estudiante |
+| 🔢 X (Entrada) | `AsistenciaPct` | Porcentaje de asistencia |
+| 🔢 X (Entrada) | `HorasEstudioSem` | Horas de estudio semanales |
+| 🔢 X (Entrada) | `TareasEntregadasPct` | Porcentaje de tareas entregadas |
+| 🔢 X (Entrada) | `Parcial1`, `Parcial2` | Calificaciones de parciales |
+| 🔢 X (Entrada) | `DificultadMateria` | Dificultad del curso (1–5) |
+| 🔢 X (Entrada) | `IntentosReprobados` | Veces que reprobó previamente |
 
 ---
 
-## 🗂️ Estructura del Proyecto
-```
-📦 PrediccionCasas
-├── app.py                  # Servidor Flask principal
-├── requirements.txt        # Dependencias del proyecto
-├── /templates
-│   └── index.html          # Página principal con interfaz animada
-├── /static
-│   ├── style.css           # Estilos y animaciones
-│   └── app.js              # Lógica interactiva en frontend
-└── california_housing.csv  # Dataset generado automáticamente
-```
+## ⚙️ Tecnologías Usadas
+
+- **Python 3.11+**
+- **Flask** — Interfaz web interactiva
+- **Pandas / NumPy** — Manipulación de datos
+- **scikit-learn** — Entrenamiento del modelo de regresión
+- **HTML + CSS + JS** — Visualización dinámica y animaciones
 
 ---
 
-## ⚙️ Instalación y Ejecución
+## 💻 Cómo ejecutar
 
-### 1️⃣ Clonar el repositorio
 ```bash
-git clone https://github.com/tuusuario/PrediccionCasas.git
-cd PrediccionCasas
-```
-
-### 2️⃣ Crear entorno virtual
-```bash
+# 1️⃣ Crear entorno virtual
 python -m venv venv
-venv\Scripts\activate   # En Windows
-source venv/bin/activate  # En Linux/Mac
-```
+venv\Scripts\activate  # (en Windows)
 
-### 3️⃣ Instalar dependencias
-```bash
+# 2️⃣ Instalar dependencias
 pip install -r requirements.txt
-```
 
-### 4️⃣ Ejecutar servidor Flask
-```bash
+# 3️⃣ Ejecutar el servidor Flask
 python app.py
 ```
 
-### 5️⃣ Abrir en navegador
-Ir a 👉 **http://127.0.0.1:5000**  
-y presionar el botón **“Empezar”** ▶️ para ver el flujo completo del modelo.
+Abre en el navegador 👉 **http://127.0.0.1:5000**  
+Presiona **“Empezar”** para ejecutar el pipeline completo.
 
 ---
 
-## 📊 Explicación del Modelo
-El modelo usa **Regresión Lineal** para predecir `MedHouseVal` (valor promedio de vivienda) a partir de variables numéricas:
+## 🚀 Funcionamiento del Pipeline
 
-| Variable (X) | Descripción |
-|---------------|-------------|
-| MedInc | Ingreso medio del vecindario (en decenas de miles de USD) |
-| HouseAge | Edad promedio de las viviendas |
-| AveRooms | Promedio de habitaciones por casa |
-| AveOccup | Promedio de ocupantes por vivienda |
-
-El resultado (`MedHouseVal`) se interpreta como el valor promedio de la vivienda en **cientos de miles de USD**.  
-Ejemplo: una predicción de `3.95` equivale aproximadamente a **$395,000 USD**.
+1️⃣ Genera o carga automáticamente un dataset académico.  
+2️⃣ Separa variables **X** (entradas) y **Y** (salidas).  
+3️⃣ Divide los datos en entrenamiento y prueba (80/20).  
+4️⃣ Entrena un modelo de regresión lineal.  
+5️⃣ Muestra métricas de rendimiento (MSE, RMSE, R²).  
+6️⃣ Visualiza las primeras filas de **X** y **Y** en tablas interactivas.  
 
 ---
 
-## ✨ Resultados Mostrados
-- **📦 Dataset:** Total de filas, columnas y variables.  
-- **🧠 Modelo:** Coeficientes, intercepto, MSE y R².  
-- **👀 Vista previa:** Primeras filas del dataset con datos reales.  
-- **✅ Animaciones:** Pasos del proceso con efectos visuales en tiempo real.
+## 🧾 Ejemplo de salida
+
+**Métricas del modelo:**
+- MSE: `0.52`
+- RMSE: `0.72`
+- R²: `0.61`
+
+**Ejemplo de predicción:**  
+> Un estudiante con 90% de asistencia, 12 horas de estudio y promedio 3.9 puede obtener una nota final estimada de **4.2**, con asignación de **18 créditos**.
 
 ---
 
-## 🧩 Créditos
-Desarrollado por **Juan** ✨  
-Proyecto educativo para visualizar la aplicación de *Machine Learning* con Python, Flask y scikit-learn.
+## 🎨 Interfaz visual
+
+El frontend muestra pasos progresivos del análisis con animaciones y emojis:  
+📦 Generación del dataset → 🧩 Separación de variables → ⚙️ Entrenamiento → 📊 Resultados finales.
 
 ---
 
-## 📄 Licencia
-Este proyecto es de uso educativo y libre. Puedes modificarlo y adaptarlo para tus propios experimentos con datasets o modelos.
+## 🏁 Autor
 
+Desarrollado por **Juan Felipe Hernández Palacio (Drownfe)**  
+💙 Proyecto académico — Politécnico Colombiano Jaime Isaza Cadavid  
+📚 Materia: *Inteligencia Artificial / Minería de Datos*
