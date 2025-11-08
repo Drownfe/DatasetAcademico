@@ -4,33 +4,41 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>🎓 Predicción Académica — Notas y Créditos</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=3" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <div class="container">
     <header>
       <h1>🎓 Predicción de Nota Final y Créditos</h1>
-      <p class="sub">Modelo de Regresión Lineal con datos académicos — demo interactiva</p>
+      <p class="sub">Regresión + Comparación de Modelos + Visualizaciones sobre datasets grandes</p>
     </header>
 
     <section class="card">
       <div class="hero">
-        <p>Analiza el dataset, entrena el modelo y visualiza <b>X</b> (entradas) y <b>Y</b> (salidas).</p>
-        <button id="startBtn" class="btn-primary">▶️ Empezar</button>
+        <div class="controls">
+          <label for="rowsInput">Tamaño del dataset:</label>
+          <input id="rowsInput" type="number" min="1000" step="1000" value="10000" />
+          <label class="chk"><input id="forceChk" type="checkbox" /> Re-crear dataset</label>
+        </div>
+        <div class="actions">
+          <button id="startBtn" class="btn-primary">▶️ Empezar</button>
+          <a id="btnCsv" class="btn-ghost" href="#">⬇️ Dataset CSV</a>
+          <a id="btnJson" class="btn-ghost" href="#">⬇️ Resultados JSON</a>
+        </div>
       </div>
 
       <div id="steps" class="steps hidden">
-        <div class="step"><div class="dot"></div><div class="label">1) Generando / cargando dataset…</div></div>
-        <div class="step"><div class="dot"></div><div class="label">2) Separando variables X (entradas) y Y (salidas)…</div></div>
-        <div class="step"><div class="dot"></div><div class="label">3) Dividiendo en entrenamiento / prueba (80/20)…</div></div>
-        <div class="step"><div class="dot"></div><div class="label">4) Entrenando modelo para NotaFinal…</div></div>
-        <div class="step"><div class="dot"></div><div class="label">5) Calculando métricas (MSE, RMSE, R²)…</div></div>
+        <div class="step"><div class="dot"></div><div class="label">1) Preparando / generando dataset…</div></div>
+        <div class="step"><div class="dot"></div><div class="label">2) Separando X (entradas) y Y (salidas)…</div></div>
+        <div class="step"><div class="dot"></div><div class="label">3) Entrenando modelos (LR, Ridge, Lasso, RF, GB)…</div></div>
+        <div class="step"><div class="dot"></div><div class="label">4) K-Fold CV y métricas…</div></div>
+        <div class="step"><div class="dot"></div><div class="label">5) Renderizando tablas y gráficos…</div></div>
         <div class="progress"><div class="bar" id="bar"></div></div>
       </div>
 
       <div id="result" class="result hidden">
-        <h2>📊 Resultados</h2>
-
+        <h2>📊 Resumen</h2>
         <div class="grid">
           <div class="box">
             <h3>📦 Dataset</h3>
@@ -39,148 +47,55 @@
             <p><b>Entradas X:</b> <span id="xcols">–</span></p>
             <p><b>Salidas Y:</b> <span id="ycols">–</span></p>
             <p style="color:#9fc6ff;margin-top:6px;"><small id="note">–</small></p>
-
-            <div class="policy">
-              <h4>🎯 Política de Créditos</h4>
-              <ul id="policyList"></ul>
+          </div>
+          <div class="box">
+            <h3>🧭 Baseline (promedio)</h3>
+            <div class="coefs">
+              <div class="pill">MAE: <span id="baseMae">–</span></div>
+              <div class="pill">RMSE: <span id="baseRmse">–</span></div>
+              <div class="pill">MAPE %: <span id="baseMape">–</span></div>
+              <div class="pill">R²: <span id="baseR2">–</span></div>
             </div>
           </div>
-
-          <div class="box">
-            <h3>🧠 Modelo (predice <code>NotaFinal</code>)</h3>
-            <p><b>MSE:</b> <span id="mse">–</span></p>
-            <p><b>RMSE:</b> <span id="rmse">–</span> <small>(escala 0–5)</small></p>
-            <p><b>R²:</b> <span id="r2">–</span></p>
-            <p><b>Intercepto:</b> <span id="intercept">–</span></p>
-            <div id="coefs" class="coefs"></div>
-          </div>
         </div>
 
-        <h3>🔢 Tabla X — Entradas (primeras filas)</h3>
+        <h2>⚖️ Comparación de modelos</h2>
         <div class="table-wrap">
-          <table id="tableX"><thead></thead><tbody></tbody></table>
+          <table id="modelsTable"><thead></thead><tbody></tbody></table>
         </div>
+        <canvas id="chartModels" height="120"></canvas>
 
-        <h3>🎯 Tabla Y — Salidas (primeras filas)</h3>
-        <div class="table-wrap">
-          <table id="tableY"><thead></thead><tbody></tbody></table>
-        </div>
+        <h2>🧪 Importancia / Coeficientes (mejor modelo)</h2>
+        <canvas id="chartCoefs" height="120"></canvas>
+
+        <h2>🔍 Real vs Predicho (mejor modelo)</h2>
+        <canvas id="chartScatter" height="120"></canvas>
+
+        <h2>📉 Distribución de residuales</h2>
+        <canvas id="chartResiduals" height="120"></canvas>
+
+        <h2>🧊 Matriz de correlación</h2>
+        <div id="heatmap" class="heatmap"></div>
+
+        <h2>🔢 Vista previa X / Y</h2>
+        <h3>Entradas (X)</h3>
+        <div class="table-wrap"><table id="tableX"><thead></thead><tbody></tbody></table></div>
+        <h3>Salidas (Y)</h3>
+        <div class="table-wrap"><table id="tableY"><thead></thead><tbody></tbody></table></div>
 
         <div class="done">
           <span class="badge">✅ Proceso completado</span>
-          <p>El modelo estima <b>NotaFinal</b> (0–5) a partir de variables académicas numéricas.
-             Los <b>CréditosAsignados</b> se determinan por política institucional según el <b>PromedioAcumulado</b>.</p>
+          <p>Se comparan modelos lineales y no lineales; se reportan métricas (MAE, RMSE, MAPE, R²), validación cruzada,
+            correlaciones y vistas previas de X/Y. Puedes descargar el CSV y los resultados en JSON.</p>
         </div>
       </div>
 
       <div id="error" class="error hidden"></div>
     </section>
 
-    <footer><p>Hecho con 💙 Flask + scikit-learn + CSS animations</p></footer>
+    <footer><p>Hecho con 💙 Flask + scikit-learn + Chart.js</p></footer>
   </div>
 
-  <!-- JS embebido -->
-  <script>
-  const startBtn = document.getElementById("startBtn");
-  const stepsEl = document.getElementById("steps");
-  const resultEl = document.getElementById("result");
-  const errorEl = document.getElementById("error");
-  const barEl = document.getElementById("bar");
-
-  const rowsEl = document.getElementById("rows");
-  const colsEl = document.getElementById("cols");
-  const xcolsEl = document.getElementById("xcols");
-  const ycolsEl = document.getElementById("ycols");
-  const noteEl = document.getElementById("note");
-  const policyListEl = document.getElementById("policyList");
-
-  const mseEl = document.getElementById("mse");
-  const rmseEl = document.getElementById("rmse");
-  const r2El = document.getElementById("r2");
-  const interceptEl = document.getElementById("intercept");
-  const coefsEl = document.getElementById("coefs");
-
-  const tableX = document.getElementById("tableX");
-  const tableY = document.getElementById("tableY");
-
-  function markStepDone(idx) {
-    const step = document.querySelectorAll(".step")[idx];
-    if (step) step.classList.add("done");
-    const progress = ((idx + 1) / document.querySelectorAll(".step").length) * 100;
-    barEl.style.width = progress + "%";
-  }
-
-  function fillTable(table, rows) {
-    if (!rows || rows.length === 0) return;
-    const cols = Object.keys(rows[0]);
-    const thead = table.querySelector("thead");
-    const tbody = table.querySelector("tbody");
-    thead.innerHTML = ""; tbody.innerHTML = "";
-
-    const trHead = document.createElement("tr");
-    cols.forEach(c => { const th = document.createElement("th"); th.textContent = c; trHead.appendChild(th); });
-    thead.appendChild(trHead);
-
-    rows.forEach(r => {
-      const tr = document.createElement("tr");
-      cols.forEach(c => { const td = document.createElement("td"); td.textContent = r[c]; tr.appendChild(td); });
-      tbody.appendChild(tr);
-    });
-  }
-
-  async function startPipeline() {
-    startBtn.disabled = true;
-    errorEl.classList.add("hidden");
-    resultEl.classList.add("hidden");
-    stepsEl.classList.remove("hidden");
-    barEl.style.width = "0%";
-    document.querySelectorAll(".step").forEach(s => s.classList.remove("done"));
-
-    const tick = (i, d) => new Promise(res => setTimeout(() => { markStepDone(i); res(); }, d));
-    await tick(0, 300); await tick(1, 300); await tick(2, 300); await tick(3, 300);
-
-    try {
-      const resp = await fetch("/start");
-      const data = await resp.json();
-      await tick(4, 300);
-
-      if (!data.ok) throw new Error(data.error || "Error desconocido");
-      const r = data.result;
-
-      rowsEl.textContent = r.dataset_info.rows;
-      colsEl.textContent = r.dataset_info.cols;
-      xcolsEl.textContent = r.dataset_info.X_cols.join(", ");
-      ycolsEl.textContent = r.dataset_info.Y_cols.join(", ");
-      noteEl.textContent = r.dataset_info.note;
-
-      policyListEl.innerHTML = "";
-      r.dataset_info.policy_credits.forEach(rule => { const li = document.createElement("li"); li.textContent = rule; policyListEl.appendChild(li); });
-
-      mseEl.textContent = r.metrics.mse.toFixed(4);
-      rmseEl.textContent = r.metrics.rmse.toFixed(3);
-      r2El.textContent = r.metrics.r2.toFixed(3);
-      interceptEl.textContent = r.metrics.intercept.toFixed(4);
-
-      coefsEl.innerHTML = "";
-      Object.entries(r.metrics.coefs).forEach(([k, v]) => {
-        const div = document.createElement("div");
-        div.className = "pill";
-        div.textContent = `${k}: ${v.toFixed(4)}`;
-        coefsEl.appendChild(div);
-      });
-
-      fillTable(tableX, r.preview_X);
-      fillTable(tableY, r.preview_Y);
-      resultEl.classList.remove("hidden");
-    } catch (err) {
-      errorEl.textContent = "⚠️ " + err.message;
-      errorEl.classList.remove("hidden");
-    } finally {
-      startBtn.disabled = false;
-    }
-  }
-
-  startBtn.addEventListener("click", startPipeline);
-  </script>
+  <script src="{{ url_for('static', filename='app.js') }}?v=3"></script>
 </body>
 </html>

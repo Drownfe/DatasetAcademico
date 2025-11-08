@@ -1,15 +1,17 @@
 import os
+import io
+import json
 import numpy as np
 import pandas as pd
-from flask import Flask, render_template, jsonify
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error, r2_score
+from flask import Flask, render_template, jsonify, request, send_file
+from sklearn.model_selection import train_test_split, KFold, cross_val_score
+from sklearn.linear_model import LinearRegression, Ridge, Lasso
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 app = Flask(__name__)
 
 CSV_PATH = "dataset_notas.csv"
-# X (entradas) y Y (salidas)
 X_COLS = [
     "PromedioAcumulado", "AsistenciaPct", "HorasEstudioSem", "TareasEntregadasPct",
     "Parcial1", "Parcial2", "DificultadMateria", "IntentosReprobados"
@@ -21,18 +23,16 @@ np.random.seed(42)
 
 # ----------------------- Generación del dataset -----------------------
 def _calcular_nota_final(row):
-    """
-    Nota final ponderada (0-5) con ruido realista + penalizaciones por dificultad e intentos previos.
-    """
-    p1 = row["Parcial1"]        # 0-5
-    p2 = row["Parcial2"]        # 0-5
-    tareas = 0.5 * (row["HorasEstudioSem"] / 20) * 5     # normaliza 0-20h a 0-5 (~max 2.5)
-    asistencia = (row["AsistenciaPct"] / 100) * 5        # 0-5
+    """Nota final ponderada (0-5) + ruido + penalizaciones por dificultad e intentos previos."""
+    p1 = row["Parcial1"]
+    p2 = row["Parcial2"]
+    tareas = 0.5 * (row["HorasEstudioSem"] / 20) * 5      # normaliza 0-20h a 0-5 (~max 2.5)
+    asistencia = (row["AsistenciaPct"] / 100) * 5         # 0-5
     base = 0.30 * p1 + 0.40 * p2 + 0.15 * tareas + 0.15 * asistencia
 
     dificultad = row["DificultadMateria"]                 # 1..5
-    penal_dif = (dificultad - 3) * 0.15                  # ±0.3 aprox
-    penal_reprob = row["IntentosReprobados"] * 0.10      # 0, 0.1, 0.2
+    penal_dif = (dificultad - 3) * 0.15                   # ±0.3 aprox
+    penal_reprob = row["IntentosReprobados"] * 0.10       # 0, 0.1, 0.2
 
     ruido = np.random.normal(0, 0.15)
     nota = base - penal_dif - penal_reprob + ruido
@@ -40,10 +40,7 @@ def _calcular_nota_final(row):
 
 
 def _asignar_creditos(prom_acum):
-    """
-    Política de créditos por promedio acumulado (0-5).
-    Ajusta aquí si tu institución usa otros topes.
-    """
+    """Política de créditos por promedio acumulado (0-5). Ajustable."""
     if prom_acum >= 4.5:  return 22
     if prom_acum >= 4.0:  return 20
     if prom_acum >= 3.7:  return 18
@@ -53,10 +50,8 @@ def _asignar_creditos(prom_acum):
     return 10
 
 
-def _crear_dataset_si_no_existe(path=CSV_PATH, n=220):
-    if os.path.exists(path):
-        return
-
+def _crear_dataset(path=CSV_PATH, n=10000):
+    """Genera SIEMPRE un dataset nuevo con n filas."""
     prom_acum       = np.clip(np.random.normal(3.6, 0.5, n), 2.0, 5.0)
     asistencia_pct  = np.clip(np.random.normal(85, 10, n), 50, 100)
     horas_estudio   = np.clip(np.random.normal(10, 4, n), 0, 25)
@@ -81,71 +76,116 @@ def _crear_dataset_si_no_existe(path=CSV_PATH, n=220):
     df["CreditosAsignados"] = df["PromedioAcumulado"].apply(_asignar_creditos)
 
     df.to_csv(path, index=False)
-    print(f"✅ Dataset creado: {path} ({len(df)} filas)")
+    return df
 
 
-# ----------------------- Pipeline de entrenamiento -----------------------
-def pipeline():
-    _crear_dataset_si_no_existe(CSV_PATH)
+def _ensure_dataset(path=CSV_PATH, n=10000, force=False):
+    """Crea dataset si no existe o si force=True o si el existente tiene menos filas que n."""
+    if not os.path.exists(path):
+        return _crear_dataset(path, n)
+    try:
+        df = pd.read_csv(path)
+    except Exception:
+        return _crear_dataset(path, n)
 
-    df = pd.read_csv(CSV_PATH)
+    if force or len(df) < n:
+        return _crear_dataset(path, n)
+    return df
 
-    # Validación columnas
-    faltantes = [c for c in X_COLS + Y_COLS if c not in df.columns]
-    if faltantes:
-        raise ValueError(f"Faltan columnas en CSV: {faltantes}")
 
+# ----------------------- Métricas y evaluación -----------------------
+def _metricas(y_true, y_pred):
+    mse = mean_squared_error(y_true, y_pred)
+    rmse = np.sqrt(mse)
+    mae = mean_absolute_error(y_true, y_pred)
+    mape = float(np.mean(np.abs((y_true - y_pred) / np.clip(np.abs(y_true), 1e-6, None))) * 100)
+    r2 = r2_score(y_true, y_pred)
+    return dict(mse=float(mse), rmse=float(rmse), mae=float(mae), mape=float(mape), r2=float(r2))
+
+
+def _evaluar_modelo(nombre, modelo, X, y):
+    # Holdout
+    X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.2, random_state=42)
+    modelo.fit(X_tr, y_tr)
+    y_pred = modelo.predict(X_te)
+    met = _metricas(y_te, y_pred)
+
+    # K-Fold CV
+    kf = KFold(n_splits=5, shuffle=True, random_state=42)
+    cv_r2 = cross_val_score(modelo, X, y, scoring="r2", cv=kf)
+    cv_mae = -cross_val_score(modelo, X, y, scoring="neg_mean_absolute_error", cv=kf)
+    met.update({
+        "cv_r2_mean": float(cv_r2.mean()), "cv_r2_std": float(cv_r2.std()),
+        "cv_mae_mean": float(cv_mae.mean()), "cv_mae_std": float(cv_mae.std()),
+    })
+
+    # Muestras para gráficas
+    idx = np.arange(len(y_te))
+    if len(idx) > 1500:
+        idx = np.random.choice(idx, size=1500, replace=False)
+    y_true_s = np.array(y_te)[idx]
+    y_pred_s = np.array(y_pred)[idx]
+    resid = (y_true_s - y_pred_s).tolist()
+
+    # Importancias / Coeficientes
+    coefs = None
+    importance = None
+    if hasattr(modelo, "coef_"):
+        coefs = {feat: float(c) for feat, c in zip(X.columns, np.ravel(modelo.coef_))}
+    if hasattr(modelo, "feature_importances_"):
+        importance = {feat: float(v) for feat, v in zip(X.columns, modelo.feature_importances_)}
+
+    return {
+        "name": nombre,
+        "metrics": met,
+        "y_true": [float(v) for v in y_true_s],
+        "y_pred": [float(v) for v in y_pred_s],
+        "residuals": [float(v) for v in resid],
+        "coefs": coefs,
+        "feature_importance": importance,
+    }
+
+
+def pipeline(n=10000, force=False):
+    df = _ensure_dataset(CSV_PATH, n=n, force=force)
     X = df[X_COLS].copy()
-    Y = df[Y_COLS].copy()
+    y = df["NotaFinal"].copy()
 
-    # Modelo de regresión para NotaFinal
-    y_nota = Y["NotaFinal"]
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y_nota, test_size=0.2, random_state=42
-    )
-    modelo = LinearRegression()
-    modelo.fit(X_train, y_train)
-    y_pred = modelo.predict(X_test)
+    # Baseline (promedio global)
+    y_base = np.full_like(y, fill_value=y.mean(), dtype=float)
+    base_metrics = _metricas(y, y_base)
 
-    mse = float(mean_squared_error(y_test, y_pred))
-    rmse = float(np.sqrt(mse))
-    r2 = float(r2_score(y_test, y_pred))
+    modelos = [
+        ("LinearRegression", LinearRegression()),
+        ("Ridge", Ridge(alpha=1.0, random_state=42)),
+        ("Lasso", Lasso(alpha=0.01, random_state=42, max_iter=5000)),
+        ("RandomForest", RandomForestRegressor(n_estimators=200, random_state=42, n_jobs=-1)),
+        ("GradientBoosting", GradientBoostingRegressor(random_state=42)),
+    ]
+    evaluaciones = [_evaluar_modelo(nm, mdl, X, y) for nm, mdl in modelos]
 
-    # Coeficientes por feature (impacto sobre NotaFinal)
-    coefs = {feat: float(c) for feat, c in zip(X.columns, modelo.coef_)}
+    # Correlaciones para heatmap
+    corr_df = df[X_COLS + Y_COLS].corr().round(3)
+    corr_labels = corr_df.columns.tolist()
+    corr_values = corr_df.values.tolist()
 
-    # Vista previa (X e Y por separado)
-    preview_X = X.head(10).round(2).to_dict(orient="records")
-    preview_Y = Y.head(10).round(2).to_dict(orient="records")
+    preview_X = X.head(12).round(2).to_dict(orient="records")
+    preview_Y = df[Y_COLS].head(12).round(2).to_dict(orient="records")
 
-    result = {
+    return {
         "dataset_info": {
             "rows": int(df.shape[0]),
             "cols": int(df.shape[1]),
             "X_cols": X_COLS,
             "Y_cols": Y_COLS,
-            "policy_credits": [
-                ">= 4.5 ➜ 22 créditos",
-                ">= 4.0 ➜ 20",
-                ">= 3.7 ➜ 18",
-                ">= 3.3 ➜ 16",
-                ">= 3.0 ➜ 14",
-                ">= 2.7 ➜ 12",
-                "<  2.7 ➜ 10",
-            ],
-            "note": "NotaFinal está en escala 0–5. Los créditos dependen del PromedioAcumulado.",
+            "note": "NotaFinal escala 0–5. Créditos se asignan por política según PromedioAcumulado.",
         },
-        "metrics": {
-            "mse": mse,
-            "rmse": rmse,
-            "r2": r2,
-            "intercept": float(modelo.intercept_),
-            "coefs": coefs,
-        },
+        "baseline": base_metrics,
+        "models": evaluaciones,
+        "corr": {"labels": corr_labels, "matrix": corr_values},
         "preview_X": preview_X,
         "preview_Y": preview_Y,
     }
-    return result
 
 
 # ----------------------- Rutas Flask -----------------------
@@ -157,10 +197,35 @@ def index():
 @app.route("/start")
 def start():
     try:
-        res = pipeline()
+        n = int(request.args.get("n", 10000))
+        force = request.args.get("force", "0") in ("1", "true", "True")
+        res = pipeline(n=n, force=force)
         return jsonify({"ok": True, "result": res})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/download/dataset")
+def download_dataset():
+    n = int(request.args.get("n", 10000))
+    force = request.args.get("force", "0") in ("1", "true", "True")
+    _ensure_dataset(CSV_PATH, n=n, force=force)
+    return send_file(CSV_PATH, as_attachment=True)
+
+
+@app.route("/download/results")
+def download_results():
+    n = int(request.args.get("n", 10000))
+    force = request.args.get("force", "0") in ("1", "true", "True")
+    res = pipeline(n=n, force=force)
+    buf = io.BytesIO(json.dumps(res, ensure_ascii=False, indent=2).encode("utf-8"))
+    buf.seek(0)
+    return send_file(buf, as_attachment=True, download_name="resultados.json", mimetype="application/json")
+
+
+@app.route("/favicon.ico")
+def favicon():
+    return ("", 204)
 
 
 if __name__ == "__main__":

@@ -1,107 +1,150 @@
 
-# 🏡 Predicción de Casas — Proyecto Interactivo con Flask & Machine Learning
+# 🎓 Predicción Académica — Notas y Créditos (Versión Avanzada)
 
-## 📘 Descripción General
-Este proyecto demuestra un flujo completo de *Machine Learning* usando un **modelo de Regresión Lineal** para predecir el valor promedio de viviendas en California 🏠.  
-La aplicación está construida con **Flask**, **pandas**, **scikit-learn** y **CSS animations**, ofreciendo una interfaz web moderna e interactiva que muestra cada paso del análisis y entrenamiento del modelo.
-
----
-
-## 🚀 Funcionalidades
-✅ Carga automática del dataset `california_housing.csv` (si no existe).  
-✅ Procesamiento de datos y división en conjuntos de entrenamiento y prueba.  
-✅ Entrenamiento de un modelo de **Regresión Lineal**.  
-✅ Cálculo de métricas de rendimiento: **Error Cuadrático Medio (MSE)** y **Coeficiente de Determinación (R²)**.  
-✅ Visualización de coeficientes del modelo.  
-✅ Vista previa del dataset real.  
-✅ Interfaz web con animaciones, colores, y pasos guiados.  
+Aplicación web **Flask + scikit-learn + Chart.js** para **regresión académica** con datasets grandes.  
+Compara varios modelos, ejecuta **validación cruzada**, calcula **métricas avanzadas** y muestra **gráficas** interactivas.  
+Incluye **descargas** del dataset y resultados.
 
 ---
 
-## 🧠 Tecnologías Utilizadas
-- **Python 3.10+**
-- **Flask** 🌐 (Backend y servidor web)
-- **scikit-learn** 🤖 (Modelo predictivo)
-- **pandas** 🧮 (Procesamiento de datos)
-- **HTML + CSS + JS** 💅 (Interfaz animada)
+## 🚀 Novedades de esta versión
+
+- **Dataset grande y paramétrico**: genera 10k, 15k, 20k+ filas realistas (selector en la UI).
+- **Re-creación bajo demanda**: casilla *Re-crear dataset* para regenerar con el tamaño elegido.
+- **Más métricas**: `MAE`, `RMSE`, `MAPE%`, `R²` y baseline por promedio.
+- **Validación cruzada (K-Fold, k=5)**: reporte `media ± desviación` para `R²` y `MAE`.
+- **Comparación de modelos**: `LinearRegression`, `Ridge`, `Lasso`, `RandomForest`, `GradientBoosting`.
+- **Gráficas nuevas**:
+  - **Barras**: R² por modelo (comparación).
+  - **Barras**: Importancia de variables o coeficientes del mejor modelo.
+  - **Dispersión**: Real vs. Predicho (con miles de puntos muestreados).
+  - **Histograma**: Distribución de residuales.
+  - **Heatmap**: Matriz de correlación entre X y Y (tabla coloreada).
+- **Descargas**: botones para **CSV** del dataset y **JSON** con todos los resultados.
 
 ---
 
-## 🗂️ Estructura del Proyecto
-```
-📦 PrediccionCasas
-├── app.py                  # Servidor Flask principal
-├── requirements.txt        # Dependencias del proyecto
-├── /templates
-│   └── index.html          # Página principal con interfaz animada
-├── /static
-│   ├── style.css           # Estilos y animaciones
-│   └── app.js              # Lógica interactiva en frontend
-└── california_housing.csv  # Dataset generado automáticamente
-```
+## 📦 Dataset
+
+Se genera de forma **sintética pero realista** con estas columnas:
+
+**Entradas (X):**
+- `PromedioAcumulado` (0–5)
+- `AsistenciaPct` (50–100%)
+- `HorasEstudioSem` (0–25 h)
+- `TareasEntregadasPct` (30–100%)
+- `Parcial1`, `Parcial2` (1–5)
+- `DificultadMateria` (1–5)
+- `IntentosReprobados` (0–2)
+
+**Salidas (Y):**
+- `NotaFinal` (0–5) — *objetivo de la regresión*
+- `CreditosAsignados` — determinada por política según `PromedioAcumulado`
+
+> La **NotaFinal** se construye con una fórmula ponderada + ruido + penalizaciones por dificultad e intentos previos.
 
 ---
 
-## ⚙️ Instalación y Ejecución
+## 🧠 Modelos y Métricas
 
-### 1️⃣ Clonar el repositorio
-```bash
-git clone https://github.com/tuusuario/PrediccionCasas.git
-cd PrediccionCasas
-```
+Modelos evaluados automáticamente:
+- `LinearRegression`
+- `Ridge (α=1.0)`
+- `Lasso (α=0.01)`
+- `RandomForestRegressor (n_estimators=200)`
+- `GradientBoostingRegressor`
 
-### 2️⃣ Crear entorno virtual
+Métricas reportadas por modelo (holdout 80/20):
+- **MAE** (error absoluto medio)
+- **RMSE** (raíz del MSE)
+- **MAPE%** (error porcentual absoluto medio)
+- **R²** (explicación de la varianza)
+
+Adicionalmente, se calcula:
+- **Baseline** (predecir el promedio de `NotaFinal`) para comparar.
+- **K-Fold CV (k=5)**: `R²` y `MAE` con **media ± desviación estándar**.
+
+---
+
+## 📊 Visualizaciones
+
+1. **Comparación de modelos (R²)** — *Barras.*  
+   Muestra qué modelo generaliza mejor (más alto es mejor).
+2. **Importancia/Coeficientes (mejor modelo)** — *Barras.*  
+   - Si el mejor modelo es no lineal (p. ej., RandomForest), muestra `feature_importances_`.
+   - Si es lineal (p. ej., Ridge), muestra los **coeficientes**.
+3. **Real vs. Predicho** — *Dispersión.*  
+   Nube de puntos con muestra de hasta 1500 observaciones; idealmente cerca de la línea `y = x`.
+4. **Distribución de residuales** — *Histograma.*  
+   Permite ver si los errores se concentran alrededor de 0 (buena señal).
+5. **Matriz de correlación** — *Heatmap (tabla coloreada).*  
+   Observa relaciones entre todas las variables X y Y (positivo en azul, negativo en rojo).
+6. **Vistas previas X / Y** — *Tablas.*  
+   Primeras filas de **entradas** (X) y **salidas** (Y).
+
+---
+
+## 🌐 Endpoints y Descargas
+
+- **App**: `GET /`  
+  UI con selector de tamaño, botón para correr el pipeline y visualizaciones.
+- **Iniciar pipeline**: `GET /start?n=10000&force=0|1`  
+  - `n`: tamaño solicitado del dataset.
+  - `force=1`: regenera el CSV, aunque exista.
+- **Descargar dataset**: `GET /download/dataset?n=10000&force=0|1` → `dataset_notas.csv`
+- **Descargar resultados**: `GET /download/results?n=10000&force=0|1` → `resultados.json`
+
+> Los enlaces de descarga también están disponibles como botones en la interfaz.
+
+---
+
+## 💻 Instalación y ejecución
+
 ```bash
 python -m venv venv
-venv\Scripts\activate   # En Windows
-source venv/bin/activate  # En Linux/Mac
-```
+# Windows
+venv\Scripts\activate
+# macOS/Linux
+source venv/bin/activate
 
-### 3️⃣ Instalar dependencias
-```bash
+pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
-```
 
-### 4️⃣ Ejecutar servidor Flask
-```bash
 python app.py
 ```
 
-### 5️⃣ Abrir en navegador
-Ir a 👉 **http://127.0.0.1:5000**  
-y presionar el botón **“Empezar”** ▶️ para ver el flujo completo del modelo.
+Abrir **http://127.0.0.1:5000**.  
+Elegir tamaño (*10k por defecto*), marcar **Re-crear** si se desea regenerar, y pulsar **▶️ Empezar**.
 
 ---
 
-## 📊 Explicación del Modelo
-El modelo usa **Regresión Lineal** para predecir `MedHouseVal` (valor promedio de vivienda) a partir de variables numéricas:
+## 🧩 Cómo leer los resultados
 
-| Variable (X) | Descripción |
-|---------------|-------------|
-| MedInc | Ingreso medio del vecindario (en decenas de miles de USD) |
-| HouseAge | Edad promedio de las viviendas |
-| AveRooms | Promedio de habitaciones por casa |
-| AveOccup | Promedio de ocupantes por vivienda |
-
-El resultado (`MedHouseVal`) se interpreta como el valor promedio de la vivienda en **cientos de miles de USD**.  
-Ejemplo: una predicción de `3.95` equivale aproximadamente a **$395,000 USD**.
+- **Baseline**: sirve de referencia mínima; cualquier modelo útil debe superarlo.
+- **Comparación (R²)**: elige el modelo con R² más alto sin sacrificar mucho MAE/MAPE.
+- **Importancia**: identifica qué variables pesan más en la predicción (útil para recomendaciones).
+- **Real vs. Predicho**: puntos cercanos a la diagonal indican buena precisión.
+- **Residuales**: distribución centrada en 0 y relativamente estrecha = mejor ajuste.
+- **Correlaciones**: verifica relaciones lineales fuertes y multicolinealidad potencial.
 
 ---
 
-## ✨ Resultados Mostrados
-- **📦 Dataset:** Total de filas, columnas y variables.  
-- **🧠 Modelo:** Coeficientes, intercepto, MSE y R².  
-- **👀 Vista previa:** Primeras filas del dataset con datos reales.  
-- **✅ Animaciones:** Pasos del proceso con efectos visuales en tiempo real.
+## 📝 Estructura del proyecto
+
+```
+tu_carpeta/
+├─ app.py                # Backend (Flask + scikit-learn)
+├─ requirements.txt      # Dependencias
+├─ templates/
+│  └─ index.html         # UI principal + contenedores de gráficos
+└─ static/
+   ├─ style.css          # Estilos
+   └─ app.js             # Lógica de front + Chart.js
+```
 
 ---
 
-## 🧩 Créditos
-Desarrollado por **Juan** ✨  
-Proyecto educativo para visualizar la aplicación de *Machine Learning* con Python, Flask y scikit-learn.
+## 🏁 Autor
 
----
-
-## 📄 Licencia
-Este proyecto es de uso educativo y libre. Puedes modificarlo y adaptarlo para tus propios experimentos con datasets o modelos.
-
+**Juan Felipe Hernández Palacio (Drownfe)**  
+Proyecto académico — *Predicción de Nota Final y Créditos con ML*.
